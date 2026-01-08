@@ -30,7 +30,7 @@ export interface SaleRow {
   netto: number;
   storno: number;
   brutto: number;
-  commission?: number; // Neu: Berechnete Provision für diesen Sale
+  commission?: number;
 }
 
 export interface AggregatedSales {
@@ -38,13 +38,11 @@ export interface AggregatedSales {
   stornoTotal: number;
   bruttoTotal: number;
   pendingTotal: number;
-  commissionTotal: number; // Neu: Gesamtprovision
-  // BNT Breakdown
+  commissionTotal: number;
   bntTotal: number;
   bntMobil: number;
   bntTV: number;
   bntKIP: number;
-  // VVL Breakdown
   vvlTotal: number;
   vvlMobil: number;
   vvlTV: number;
@@ -52,4 +50,11 @@ export interface AggregatedSales {
   stornoRate: number;
 }
 
-export type DashboardTab = '360' | 'wca' | 'whatsapp' | 'gap' | 'coaching' | 'storno' | 'products';
+export interface MonthSnapshot {
+  id: string; // z.B. "11-2025"
+  label: string; // z.B. "November 2025"
+  kpiData: Record<string, KPIAgent>;
+  salesData: SaleRow[];
+}
+
+export type DashboardTab = '360' | 'wca' | 'trends' | 'whatsapp' | 'gap' | 'coaching' | 'storno' | 'products';

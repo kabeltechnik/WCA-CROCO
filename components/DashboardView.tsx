@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { KPIAgent, AggregatedSales } from '../types';
-import { Shield, Zap, TrendingUp, AlertCircle } from 'lucide-react';
+import { TrendingUp, Award, Zap, Shield, Target, AlertTriangle } from 'lucide-react';
 
 interface Props {
   kpiData: Record<string, KPIAgent>;
@@ -10,108 +10,105 @@ interface Props {
 }
 
 const DashboardView: React.FC<Props> = ({ kpiData, getAgentSales, onOpenAgent }) => {
-  // Fix: Explicitly cast Object.values(kpiData) to KPIAgent[] to avoid "unknown" type errors
-  const sortedAgents = (Object.values(kpiData) as KPIAgent[]).sort((a, b) => b.pix - a.pix);
+  const sortedAgents = useMemo(() => {
+    return (Object.values(kpiData) as KPIAgent[]).sort((a, b) => b.pix - a.pix);
+  }, [kpiData]);
 
   return (
-    <div className="animate-in fade-in duration-700">
-      <div className="flex justify-between items-end mb-12 border-b border-white/10 pb-10">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex justify-between items-end mb-12 border-b border-white/5 pb-10">
         <div>
           <div className="flex items-center gap-4 mb-4">
              <div className="p-3 bg-red-600/20 rounded-2xl border border-red-600/30 text-red-500 shadow-neon">
                <TrendingUp size={24} />
              </div>
-             <h2 className="text-5xl font-black italic text-white uppercase tracking-tighter">
-               Strategisches Ranking
-             </h2>
+             <h2 className="text-5xl font-black italic text-white uppercase tracking-tighter">Ranking <span className="text-red-600">Leaderboard</span></h2>
           </div>
-          <p className="text-gray-500 text-xs font-black uppercase tracking-[0.4em] ml-1">Einsatzdaten Live • Alanya Standort</p>
+          <p className="text-gray-500 text-xs font-black uppercase tracking-[0.4em] ml-1">Live Performance • Elite Squad Alanya</p>
         </div>
-        <div className="flex gap-10">
+        <div className="flex gap-12">
           <div className="text-right">
-            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Einsatzkräfte</div>
-            <div className="text-3xl font-black text-white">{sortedAgents.length} <span className="text-sm text-gray-600">AGENTEN</span></div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2">Units in View</div>
+            <div className="text-3xl font-black text-white">{sortedAgents.length}</div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Betriebliche Gesundheit</div>
-            <div className="text-3xl font-black text-emerald-500">98.4%</div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2">Avg PIX</div>
+            <div className="text-3xl font-black text-blue-500">
+              {(sortedAgents.reduce((acc, curr) => acc + curr.pix, 0) / (sortedAgents.length || 1)).toFixed(2)}
+            </div>
           </div>
         </div>
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-y-6">
+      <div className="overflow-x-auto pb-10">
+        <table className="w-full border-separate border-spacing-y-4">
           <thead>
-            <tr className="text-left text-[11px] uppercase font-black tracking-[0.3em] text-gray-600 px-4">
-              <th className="pb-4 pl-10">Operative Einheit</th>
-              <th className="pb-4">Basis Ebene</th>
-              <th className="pb-4 text-center">Kern PIX</th>
-              <th className="pb-4 text-center">BNT Σ <span className="text-emerald-500 block text-[9px] mt-1">(Netto)</span></th>
-              <th className="pb-4 text-center">VVL Σ <span className="text-blue-500 block text-[9px] mt-1">(Netto)</span></th>
-              <th className="pb-4 text-center text-blue-400">Smile (CS)</th>
-              <th className="pb-4 text-center text-emerald-400">Fix (FF7)</th>
-              <th className="pb-4 pr-10 text-center text-red-500">Storno Leak</th>
+            <tr className="text-left text-[11px] uppercase font-black tracking-[0.3em] text-gray-600">
+              <th className="pb-4 pl-10">Agent Unit</th>
+              <th className="pb-4 text-center">Core PIX</th>
+              <th className="pb-4 text-center">BNT %</th>
+              <th className="pb-4 text-center">VVL %</th>
+              <th className="pb-4 text-center">CS</th>
+              <th className="pb-4 text-center">FF7</th>
+              <th className="pb-4 text-center">Leakage</th>
+              <th className="pb-4 pr-10 text-right">Provision</th>
             </tr>
           </thead>
           <tbody>
             {sortedAgents.map((agent) => {
               const sales = getAgentSales(agent.id);
-              const isHighPerformer = agent.pix >= 8.1;
+              const isElite = agent.pix >= 8.1;
+              const isSpecialist = agent.pix >= 6.1 && agent.pix < 8.1;
+              const isCritical = agent.cs_mw < 90 || agent.ff7_mw < 75;
+
               return (
                 <tr 
                   key={agent.id} 
                   onClick={() => onOpenAgent(agent.id)}
-                  className={`group relative glass hover:bg-white/[0.07] transition-all cursor-pointer border border-white/5 ${isHighPerformer ? 'hover:shadow-[0_0_40px_rgba(230,0,0,0.1)]' : ''}`}
+                  className={`group transition-all cursor-pointer border relative ${
+                    isCritical 
+                      ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20' 
+                      : 'glass border-white/5 hover:bg-white/[0.08]'
+                  }`}
                 >
-                  <td className="py-8 pl-10 rounded-l-[32px] border-l border-white/5">
+                  <td className={`py-6 pl-10 rounded-l-[28px] border-l ${isCritical ? 'border-l-red-500/30' : 'border-l-white/5'}`}>
                     <div className="flex items-center gap-6">
-                      <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-xl transition-all shadow-2xl border ${isHighPerformer ? 'bg-gradient-to-br from-[#E60000] to-[#800000] text-white border-white/20 group-hover:rotate-6 shadow-[#E60000]/20' : 'bg-white/5 text-gray-400 border-white/5 group-hover:text-white'}`}>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl border transition-all ${isElite ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40 shadow-neon' : isSpecialist ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-white/5 text-gray-600 border-white/5'}`}>
                         {agent.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-black text-white text-xl group-hover:text-[#E60000] transition-colors tracking-tighter uppercase">{agent.name}</div>
-                        <div className="text-[10px] text-gray-500 font-mono tracking-widest uppercase mt-1 flex items-center gap-2">
-                           <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ID: {agent.id}
+                        <div className="font-black text-white text-lg tracking-tighter uppercase flex items-center gap-2">
+                          {agent.name}
+                          {isElite && <Award size={14} className="text-yellow-500 animate-bounce" />}
+                          {isCritical && <AlertTriangle size={14} className="text-red-500 animate-pulse" />}
                         </div>
+                        <div className="text-[10px] text-gray-500 font-mono tracking-widest uppercase mt-1">Ebene 0{agent.ebene} • ID: {agent.id}</div>
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                       <Shield size={14} className={isHighPerformer ? 'text-yellow-500' : 'text-gray-700'} />
-                       <span className="bg-white/5 text-gray-400 px-4 py-1.5 rounded-full text-[10px] font-black border border-white/5 uppercase tracking-tighter">
-                         Level 0{agent.ebene}
-                       </span>
-                    </div>
-                  </td>
                   <td className="text-center">
-                    <div className={`text-4xl font-black tracking-tighter leading-none ${isHighPerformer ? 'text-white drop-shadow-neon' : 'text-gray-400'}`}>
+                    <div className={`text-3xl font-black tracking-tighter ${isElite ? 'text-white drop-shadow-neon' : isSpecialist ? 'text-blue-400' : 'text-gray-400'}`}>
                       {agent.pix.toFixed(2)}
                     </div>
                   </td>
                   <td className="text-center">
-                    <div className={`font-black text-2xl ${agent.bnt_mw < 3 ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {agent.bnt_mw.toFixed(2)}%
-                    </div>
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-tighter mt-1">{sales.bntTotal} <span className="text-[8px] opacity-50">SALES</span></div>
+                    <div className="text-emerald-400 font-black text-xl">{agent.bnt_mw.toFixed(1)}%</div>
+                    <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-1">{sales.bntTotal} PCS</div>
                   </td>
                   <td className="text-center">
-                    <div className="text-white font-black text-2xl">{agent.vvl_mw.toFixed(2)}%</div>
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-tighter mt-1">{sales.vvlTotal} <span className="text-[8px] opacity-50">SALES</span></div>
+                    <div className="text-blue-400 font-black text-xl">{agent.vvl_mw.toFixed(1)}%</div>
+                    <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-1">{sales.vvlTotal} PCS</div>
                   </td>
+                  <td className={`text-center font-bold text-lg ${agent.cs_mw < 90 ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-blue-300'}`}>{agent.cs_mw.toFixed(1)}%</td>
+                  <td className={`text-center font-bold text-lg ${agent.ff7_mw < 75 ? 'text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'text-emerald-300'}`}>{agent.ff7_mw.toFixed(1)}%</td>
                   <td className="text-center">
-                    <div className={`font-black text-2xl ${agent.cs_mw < 90 ? 'text-orange-400' : 'text-blue-400'}`}>
-                      {agent.cs_mw.toFixed(1)}%
+                    <div className={`text-lg font-black ${sales.stornoRate > 15 ? 'text-red-500' : 'text-gray-500'}`}>
+                      {sales.stornoRate.toFixed(1)}%
                     </div>
                   </td>
-                  <td className="text-center text-emerald-400 font-black text-2xl">{agent.ff7_mw.toFixed(1)}%</td>
-                  <td className="text-center pr-10 rounded-r-[32px] border-r border-white/5">
-                    <div className={`text-2xl font-black ${sales.stornoTotal > 5 ? 'text-red-500 animate-pulse' : 'text-gray-600'}`}>
-                      {sales.stornoTotal}
-                    </div>
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 flex items-center justify-center gap-1">
-                      <AlertCircle size={10} /> {sales.stornoRate.toFixed(1)}%
-                    </div>
+                  <td className={`py-6 pr-10 rounded-r-[28px] border-r text-right ${isCritical ? 'border-r-red-500/30' : 'border-r-white/5'}`}>
+                    <div className="text-xl font-black text-white tracking-tighter italic">{sales.commissionTotal.toFixed(2)} €</div>
+                    <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-1">Gerechnet</div>
                   </td>
                 </tr>
               );

@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { KPIAgent, AggregatedSales } from '../types';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, MessageCircle } from 'lucide-react';
 
 interface Props {
   kpiData: Record<string, KPIAgent>;
@@ -11,48 +11,55 @@ interface Props {
 const WhatsappView: React.FC<Props> = ({ kpiData, getAgentSales }) => {
   const [copied, setCopied] = React.useState(false);
 
-  const text = useMemo(() => {
-    // Fix: Explicitly cast Object.values(kpiData) to KPIAgent[] to avoid "unknown" type errors
-    const agents = Object.values(kpiData) as KPIAgent[];
-    const topSales = [...agents]
-      // Fix: Accessed nettoTotal instead of netto which was not defined on AggregatedSales
-      .map(k => ({ name: k.name, n: getAgentSales(k.id).nettoTotal }))
-      .sort((a, b) => b.n - a.n)
-      .slice(0, 5);
+  const stats = useMemo(() => {
+    // QUALIFIKATIONS-FILTER: Mindestens 100 Calls
+    const agents = (Object.values(kpiData) as KPIAgent[]).filter(a => a.calls >= 100);
+    
+    const salesRank = [...agents].map(k => ({ name: k.name, n: getAgentSales(k.id).nettoTotal })).sort((a,b) => b.n - a.n).slice(0,5);
+    const qualityRank = [...agents].sort((a,b) => b.pix - a.pix).slice(0,5);
+    const csRank = [...agents].sort((a,b) => b.cs_mw - a.cs_mw).slice(0,3);
+    const lowStorno = [...agents].map(k => ({ name: k.name, s: getAgentSales(k.id).stornoRate, n: getAgentSales(k.id).nettoTotal }))
+      .filter(x => x.n >= 5) // Mindestens 5 Sales für Storno-Ranking
+      .sort((a,b) => a.s - b.s).slice(0,3);
 
-    const topQuality = [...agents]
-      .sort((a, b) => b.cs_mw - a.cs_mw)
-      .slice(0, 5);
+    return `🚀 *VKD PERFORMANCE RADAR* 🚀
+${new Date().toLocaleDateString('de-DE')} • Alanya Campus
+(Filter: Nur Einheiten mit >= 100 Calls)
 
-    return `🚀 *TEAM PERFORMANCE UPDATE* 🚀\n\n👑 *TOP VERKÄUFER (Netto)*\n${topSales.map((x, i) => `${i + 1}. ${x.name} (${x.n} Sales)`).join('\n')}\n\n💎 *TOP QUALITÄT (CS)*\n${topQuality.map((x, i) => `${i + 1}. ${x.name} (${x.cs_mw.toFixed(1)}%)`).join('\n')}\n\n#togetherwecan #vodafone #teamspirit`;
+🏆 *SALES KÖNIGE (Netto)*
+${salesRank.map((x, i) => `${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} ${x.name} → ${x.n} Sales`).join('\n')}
+
+💎 *WCA ELITE (PIX)*
+${qualityRank.map((x, i) => `⭐ ${x.name} → ${x.pix.toFixed(1)} Pkt`).join('\n')}
+
+🎯 *CS CHAMPIONS*
+${csRank.map((x, i) => `✅ ${x.name} → ${x.cs_mw.toFixed(1)}%`).join('\n')}
+
+🛡️ *STORNO-WÄCHTER*
+${lowStorno.map((x, i) => `🛡️ ${x.name} → ${x.s.toFixed(1)}%`).join('\n')}
+
+*#togetherwecan #elitesquad #performance*`;
   }, [kpiData, getAgentSales]);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="animate-in fade-in duration-500 max-w-2xl mx-auto py-12">
-      <h2 className="text-2xl font-black mb-8 flex items-center justify-center gap-3 italic">
-        <span className="w-1.5 h-8 bg-emerald-500 rounded-full inline-block"></span>
-        WHATSAPP UPDATE GENERATOR
-      </h2>
+      <div className="flex flex-col items-center mb-10">
+        <div className="w-20 h-20 bg-emerald-500/20 rounded-[30px] flex items-center justify-center text-emerald-500 mb-6 shadow-neon">
+          <MessageCircle size={40} />
+        </div>
+        <h2 className="text-4xl font-black italic uppercase tracking-tighter">Update <span className="text-emerald-500">Generator</span></h2>
+      </div>
 
-      <div className="bg-[#0c1510] border border-[#1f352a] rounded-3xl p-8 shadow-2xl relative">
-        <div className="absolute top-4 right-4 text-[10px] font-black text-emerald-500 uppercase tracking-widest opacity-30">WhatsApp Preview</div>
-        <pre className="whitespace-pre-wrap font-mono text-emerald-100 text-sm md:text-base leading-relaxed">
-          {text}
+      <div className="glass rounded-[40px] p-10 border border-emerald-500/20 bg-[#0a0a0a] relative">
+        <div className="absolute top-6 right-8 text-[10px] font-black text-emerald-500/30 uppercase tracking-[0.3em]">Broadcast Ready</div>
+        <pre className="whitespace-pre-wrap font-mono text-emerald-100 text-sm leading-relaxed">
+          {stats}
         </pre>
       </div>
 
-      <button 
-        onClick={handleCopy}
-        className={`w-full mt-8 p-6 rounded-3xl font-black flex items-center justify-center gap-3 transition-all transform active:scale-95 ${copied ? 'bg-emerald-500 text-black' : 'bg-[#E60000] text-white hover:bg-[#ff1a1a] shadow-[0_4px_20px_rgba(230,0,0,0.3)]'}`}
-      >
-        {copied ? <Check /> : <Copy />}
-        {copied ? 'TEXT KOPIERT!' : 'TEXT FÜR WHATSAPP KOPIEREN'}
+      <button onClick={() => { navigator.clipboard.writeText(stats); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+        className={`w-full mt-10 p-8 rounded-[32px] font-black text-xl flex items-center justify-center gap-4 transition-all transform active:scale-95 ${copied ? 'bg-emerald-500 text-black' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon'}`}>
+        {copied ? 'BEREIT ZUM VERSENDEN!' : 'FÜR WHATSAPP KOPIEREN'}
       </button>
     </div>
   );

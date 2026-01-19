@@ -1,4 +1,3 @@
-
 export interface KPIAgent {
   id: string;
   name: string;
@@ -57,4 +56,4 @@ export interface MonthSnapshot {
   salesData: SaleRow[];
 }
 
-export type DashboardTab = '360' | 'wca' | 'trends' | 'whatsapp' | 'gap' | 'coaching' | 'storno' | 'products';
+export type DashboardTab = '360' | 'wca' | 'trends' | 'class-trends' | 'whatsapp' | 'gap' | 'coaching' | 'storno' | 'products' | 'commissions';

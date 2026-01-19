@@ -1,8 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
 import { SaleRow, MonthSnapshot, KPIAgent } from '../types';
-import { Cell, PieChart, Pie, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingDown, TrendingUp, Award, Users, ArrowRight, Package } from 'lucide-react';
+import { TrendingDown, TrendingUp, ArrowRight } from 'lucide-react';
 import { AGENTS } from '../constants';
 
 interface Props {
@@ -36,7 +34,7 @@ const ProductsView: React.FC<Props> = ({ salesData, history }) => {
         {/* TOP ASSETS */}
         <div className="glass rounded-[40px] p-10 border border-white/5">
           <h3 className="text-xl font-black text-white mb-8 uppercase italic tracking-tighter flex items-center gap-3">
-            <TrendingUp className="text-emerald-500" /> Top Sales Assets
+            <TrendingUp className="text-emerald-500" /> Top Verkaufsprodukte
           </h3>
           <div className="space-y-3">
             {topProducts.map((p, i) => (
@@ -57,7 +55,7 @@ const ProductsView: React.FC<Props> = ({ salesData, history }) => {
         {/* STORNO TREIBER */}
         <div className="glass rounded-[40px] p-10 border border-white/5">
           <h3 className="text-xl font-black text-white mb-8 uppercase italic tracking-tighter flex items-center gap-3">
-            <TrendingDown className="text-red-500" /> Storno-Treiber (Leakage)
+            <TrendingDown className="text-red-500" /> Storno-Treiber (Schwund)
           </h3>
           <div className="space-y-3">
             {stornoProducts.map((p, i) => (
@@ -76,7 +74,6 @@ const ProductsView: React.FC<Props> = ({ salesData, history }) => {
         </div>
       </div>
 
-      {/* DRILLDOWN MODAL */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setSelectedProduct(null)} />
@@ -90,7 +87,6 @@ const ProductsView: React.FC<Props> = ({ salesData, history }) => {
             </div>
             
             <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-4">
-              {/* Fix: Explicitly cast counts to number for arithmetic operations in sort to avoid typing errors */}
               {Object.entries(productStats.find(p => p.name === selectedProduct)?.agents || {})
                 .sort((a, b) => (b[1] as number) - (a[1] as number))
                 .map(([id, count]) => (

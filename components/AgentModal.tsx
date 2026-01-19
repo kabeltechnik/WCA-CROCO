@@ -1,22 +1,23 @@
-
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, Loader2, Bot, ShoppingCart, Smartphone, Tv, Wifi, Shield, Target, AlertCircle, Clock, CheckCircle2, Zap, Brain, Trophy, Euro, MessageSquare, Award, Flame, Timer, BarChart3, ChevronRight } from 'lucide-react';
+import { X, TrendingUp, Loader2, Zap, Shield, AlertCircle, Brain, Trophy, MessageSquare, Award, BarChart3, Activity, Filter, AlertTriangle } from 'lucide-react';
 import { KPIAgent, SaleRow, AggregatedSales, MonthSnapshot } from '../types';
 import { generateCoachingPlan } from '../services/gemini';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { AGENTS } from '../constants';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   agent: KPIAgent;
   sales: SaleRow[];
-  getAgentSales: (id: string) => AggregatedSales;
+  getAgentSales: (id: string, monthKey?: string) => AggregatedSales;
   history?: Record<string, MonthSnapshot>;
 }
 
 const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSales, history = {} }) => {
   const [aiCoaching, setAiCoaching] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showStornosOnly, setShowStornosOnly] = useState(false);
 
   const stats = useMemo(() => getAgentSales(agent.id), [agent.id, getAgentSales]);
 
@@ -36,11 +37,36 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
   ], [agent]);
 
   const historicalData = useMemo(() => {
-    return Object.keys(history).sort().map(key => ({
-      month: key,
-      pix: history[key].kpiData[agent.id]?.pix || 0
-    }));
-  }, [history, agent.id]);
+    const keys = Object.keys(history).sort((a, b) => {
+      const [ma, ya] = a.split('-').map(Number);
+      const [mb, yb] = b.split('-').map(Number);
+      return new Date(ya, ma - 1).getTime() - new Date(yb, mb - 1).getTime();
+    });
+
+    return keys.slice(-6).map(key => {
+      const snap = history[key];
+      const histAgent = snap.kpiData[agent.id];
+      if (!histAgent) return null;
+      
+      const salesStats = getAgentSales(agent.id, key); // Use correct signature if implemented
+
+      return {
+        month: key,
+        pix: histAgent.pix,
+        storno: salesStats.stornoRate,
+        bnt: salesStats.bntTotal,
+        vvl: salesStats.vvlTotal
+      };
+    }).filter(Boolean);
+  }, [history, agent.id, getAgentSales]); // Ensure getAgentSales dependency
+
+  const filteredSales = useMemo(() => {
+    let s = [...sales];
+    if (showStornosOnly) {
+        s = s.filter(x => x.storno > 0);
+    }
+    return s;
+  }, [sales, showStornosOnly]);
 
   if (!isOpen) return null;
 
@@ -65,7 +91,7 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
               <div className="flex items-center gap-6 mt-3 text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">
                 <span>Unit 0{agent.ebene}</span>
                 <span>•</span>
-                <span>Experience: {agent.months} Months</span>
+                <span>Erfahrung: {agent.months} Monate</span>
                 <span>•</span>
                 <span className="text-red-600">Alanya Command</span>
               </div>
@@ -79,7 +105,7 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
         <div className="flex-1 overflow-hidden flex">
           <div className="w-[450px] border-r border-white/5 p-8 overflow-y-auto custom-scrollbar bg-black/30">
             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-8 flex items-center gap-3">
-              <BarChart3 size={14} className="text-red-600" /> Performance Matrix
+              <BarChart3 size={14} className="text-red-600" /> Leistungs-Matrix
             </h3>
             
             <div className="h-64 mb-10">
@@ -94,10 +120,10 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
 
             <div className="space-y-4 mb-10">
               {[
-                { label: 'CS Score', val: `${agent.cs_mw.toFixed(1)}%`, icon: Zap, color: 'text-blue-400' },
-                { label: 'FF7 Accuracy', val: `${agent.ff7_mw.toFixed(1)}%`, icon: Shield, color: 'text-emerald-400' },
-                { label: 'Feedback FQ', val: `${agent.fbq.toFixed(1)}%`, icon: MessageSquare, color: 'text-orange-400' },
-                { label: 'Risk Factor', val: `${agent.deep.toFixed(1)}%`, icon: AlertCircle, color: 'text-red-500' }
+                { label: 'Kundenzufriedenheit', val: `${agent.cs_mw.toFixed(1)}%`, icon: Zap, color: 'text-blue-400' },
+                { label: 'FF7 (Lösung)', val: `${agent.ff7_mw.toFixed(1)}%`, icon: Shield, color: 'text-emerald-400' },
+                { label: 'Feedback Quote', val: `${agent.fbq.toFixed(1)}%`, icon: MessageSquare, color: 'text-orange-400' },
+                { label: 'Risiko-Faktor', val: `${agent.deep.toFixed(1)}%`, icon: AlertCircle, color: 'text-red-500' }
               ].map((m, i) => (
                 <div key={i} className="glass p-5 rounded-2xl border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -111,7 +137,7 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
 
             <div className="glass rounded-3xl p-6 border border-red-600/20 bg-red-600/5">
               <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Brain size={16} /> Elite Coaching Directive
+                <Brain size={16} /> Elite Coaching Direktive
               </h3>
               <p className="text-sm text-gray-400 italic leading-relaxed">
                 {aiCoaching || "Klicken Sie auf den Button, um die taktische Analyse von Veysel Yarba zu generieren."}
@@ -127,50 +153,106 @@ const AgentModal: React.FC<Props> = ({ isOpen, onClose, agent, sales, getAgentSa
           <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-3 gap-6 mb-10">
               <div className="glass p-8 rounded-[32px] border-b-4 border-emerald-500/50 bg-emerald-500/5">
-                <div className="text-[10px] font-black text-gray-600 uppercase mb-3">Total Netto Sales</div>
+                <div className="text-[10px] font-black text-gray-600 uppercase mb-3">Gesamt Netto Sales</div>
                 <div className="text-6xl font-black text-white tracking-tighter">{stats.nettoTotal}</div>
               </div>
-              <div className="glass p-8 rounded-[32px] border-b-4 border-red-500/50 bg-red-500/5">
-                <div className="text-[10px] font-black text-gray-600 uppercase mb-3">Leakage Rate</div>
+              <div 
+                 onClick={() => setShowStornosOnly(!showStornosOnly)}
+                 className={`glass p-8 rounded-[32px] border-b-4 border-red-500/50 bg-red-500/5 cursor-pointer transition-all hover:scale-[1.02] ${showStornosOnly ? 'ring-2 ring-red-500' : ''}`}
+                 title="Klicken um Storno-Details zu sehen"
+              >
+                <div className="text-[10px] font-black text-gray-600 uppercase mb-3 flex items-center gap-2">
+                    Storno-Quote {showStornosOnly && <Filter size={10} />}
+                </div>
                 <div className="text-6xl font-black text-red-500 tracking-tighter">{stats.stornoRate.toFixed(1)}%</div>
               </div>
               <div className="glass p-8 rounded-[32px] border-b-4 border-blue-500/50 bg-blue-500/5">
-                <div className="text-[10px] font-black text-gray-600 uppercase mb-3">Calculated Bonus</div>
+                <div className="text-[10px] font-black text-gray-600 uppercase mb-3">Berechneter Bonus</div>
                 <div className="text-6xl font-black text-emerald-400 tracking-tighter">{stats.commissionTotal.toFixed(2)}€</div>
               </div>
             </div>
 
+            {historicalData && historicalData.length > 1 && (
+              <div className="glass rounded-[32px] p-8 border border-white/5 mb-10 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                    <Activity size={20} className="text-blue-500" /> Performance Entwicklung
+                  </h3>
+                  <div className="flex gap-4">
+                     {/* Legend handled by Recharts */}
+                  </div>
+                </div>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                      <XAxis dataKey="month" stroke="#444" fontSize={10} fontWeight={900} />
+                      <YAxis yAxisId="left" stroke="#444" fontSize={10} fontWeight={900} domain={[0, 10]} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#444" fontSize={10} fontWeight={900} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '10px' }}
+                        itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                      <Line yAxisId="left" type="monotone" name="PIX Score" dataKey="pix" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399' }} />
+                      <Line yAxisId="right" type="monotone" name="Storno %" dataKey="storno" stroke="#ef4444" strokeWidth={2} dot={{ fill: '#ef4444' }} strokeDasharray="5 5" />
+                      <Line yAxisId="right" type="monotone" name="BNT Vol" dataKey="bnt" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6' }} />
+                      <Line yAxisId="right" type="monotone" name="VVL Vol" dataKey="vvl" stroke="#ec4899" strokeWidth={2} dot={{ fill: '#ec4899' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
             <div className="glass rounded-[32px] p-8 border border-white/5">
-              <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter">Tactical Chronology</h3>
+              <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
+                      {showStornosOnly ? 'Storno-Analyse' : 'Verkaufs-Historie'}
+                  </h3>
+                  {showStornosOnly && (
+                      <button onClick={() => setShowStornosOnly(false)} className="px-4 py-2 bg-white/5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-colors">
+                          Filter zurücksetzen
+                      </button>
+                  )}
+              </div>
+              
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-[10px] font-black text-gray-700 uppercase tracking-widest border-b border-white/5 pb-4">
-                    <th className="pb-4">Asset Type</th>
-                    <th className="pb-4">Class</th>
-                    <th className="pb-4">Timestamp</th>
-                    <th className="pb-4 text-right">Value</th>
+                    <th className="pb-4">Produktart</th>
+                    <th className="pb-4">Klasse</th>
+                    <th className="pb-4">Zeitpunkt</th>
+                    <th className="pb-4 text-right">Wert</th>
                     <th className="pb-4 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {sales.slice().reverse().map((s, i) => (
-                    <tr key={i} className="group hover:bg-white/5 transition-all">
-                      <td className="py-4">
-                        <div className="text-white font-bold text-sm uppercase group-hover:text-red-600 transition-colors">{s.prod}</div>
-                        <div className="text-[9px] text-gray-700 font-mono">{s.code}</div>
-                      </td>
-                      <td className="py-4 text-[10px] font-black text-gray-600">{s.class}</td>
-                      <td className="py-4 text-[10px] font-bold text-gray-600">{s.date}</td>
-                      <td className="py-4 text-right font-black text-emerald-500">{(s.commission || 0).toFixed(2)}€</td>
-                      <td className="py-4 text-right">
-                        {s.storno > 0 ? (
-                          <span className="bg-red-500/10 text-red-500 text-[9px] font-black px-3 py-1 rounded-lg border border-red-500/20">LEAKAGE</span>
-                        ) : (
-                          <span className="bg-emerald-500/10 text-emerald-500 text-[9px] font-black px-3 py-1 rounded-lg border border-emerald-500/20">VALID</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredSales.length === 0 ? (
+                      <tr>
+                          <td colSpan={5} className="py-8 text-center text-gray-500 italic">Keine Daten gefunden.</td>
+                      </tr>
+                  ) : (
+                    filteredSales.slice().reverse().map((s, i) => (
+                        <tr key={i} className={`group hover:bg-white/5 transition-all ${s.storno > 0 ? 'bg-red-500/5' : ''}`}>
+                        <td className="py-4">
+                            <div className="text-white font-bold text-sm uppercase group-hover:text-red-600 transition-colors">{s.prod}</div>
+                            <div className="text-[9px] text-gray-700 font-mono">{s.code}</div>
+                        </td>
+                        <td className="py-4 text-[10px] font-black text-gray-600">{s.class}</td>
+                        <td className="py-4 text-[10px] font-bold text-gray-600">{s.date}</td>
+                        <td className="py-4 text-right font-black text-emerald-500">{(s.commission || 0).toFixed(2)}€</td>
+                        <td className="py-4 text-right">
+                            {s.storno > 0 ? (
+                            <span className="bg-red-500/10 text-red-500 text-[9px] font-black px-3 py-1 rounded-lg border border-red-500/20 flex items-center justify-end gap-1 ml-auto w-fit">
+                                <AlertTriangle size={10} /> STORNO
+                            </span>
+                            ) : (
+                            <span className="bg-emerald-500/10 text-emerald-500 text-[9px] font-black px-3 py-1 rounded-lg border border-emerald-500/20">GÜLTIG</span>
+                            )}
+                        </td>
+                        </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

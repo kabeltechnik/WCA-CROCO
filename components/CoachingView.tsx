@@ -1,7 +1,6 @@
-
 import React, { useMemo } from 'react';
 import { KPIAgent, AggregatedSales, MonthSnapshot } from '../types';
-import { Brain, Award, Zap, ShieldAlert, ArrowRight, Star, CheckCircle2, Search, Target, MessageSquare } from 'lucide-react';
+import { Brain, Zap, ShieldAlert, Search, Target, MessageSquare } from 'lucide-react';
 
 interface Props {
   kpiData: Record<string, KPIAgent>;

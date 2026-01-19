@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { KPIAgent, AggregatedSales, SaleRow } from '../types';
 import { AlertTriangle, Calendar } from 'lucide-react';
@@ -10,7 +9,6 @@ interface Props {
 }
 
 const StornoView: React.FC<Props> = ({ kpiData, getAgentSales, salesData }) => {
-  // Fix: Explicitly cast Object.values(kpiData) to KPIAgent[] to avoid "unknown" type errors
   const criticalAgents = (Object.values(kpiData) as KPIAgent[])
     .map(k => {
       const s = getAgentSales(k.id);
